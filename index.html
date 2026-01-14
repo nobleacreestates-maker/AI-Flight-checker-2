@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Find best value flights and hotels with AI-powered itineraries">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FlightAgent">
+    
+    <title>AI Flight Search Agent</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+            max-width: 90%;
+        }
+        
+        .install-prompt.show {
+            display: flex;
+        }
+        
+        .install-prompt button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .install-prompt button.dismiss {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .keyword-input {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        
+        .keyword-tag {
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .keyword-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+        }
+        
+        button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        button.primary:hover {
+            transform: translateY(-2px);
+        }
+        
+        button.primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .result-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .flight-option, .hotel-option {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .book-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        
+        .book-button:hover {
+            background: #5568d3;
+        }
+        
+        .hotel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        
+        .hotel-option {
+            border-left-color: #f59e0b;
+        }
+        
+        .hotel-rating {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        .itinerary {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee;
+            border-left: 4px solid #f44;
+            padding: 15px;
+            border-radius: 8px;
+            color: #c33;
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .trip-type-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .trip-type-toggle button {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .trip-type-toggle button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .hotel-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        <div>
+            <strong>📱 Install App</strong>
+            <p style="font-size: 14px; color: #666; margin-top: 5px;">Get quick access from your home screen!</p>
+        </div>
+        <button id="installButton">Install</button>
+        <button class="dismiss" id="dismissButton">Later</button>
+    </div>
+
+    <div class="container">
+        <h1>✈️ AI Flight Search Agent</h1>
+        <p class="subtitle">Find best value flights + hotels with AI-powered itineraries</p>
+        
+        <form id="searchForm">
+            <div class="trip-type-toggle">
+                <button type="button" class="active" data-type="return">Round Trip</button>
+                <button type="button" data-type="oneway">One Way</button>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="origin">From</label>
+                    <select id="origin" required>
+                        <option value="">Select airport</option>
+                        <option value="LHR">London Heathrow (LHR)</option>
+                        <option value="LGW">London Gatwick (LGW)</option>
+                        <option value="STN">London Stansted (STN)</option>
+                        <option value="LTN">London Luton (LTN)</option>
+                        <option value="MAN">Manchester (MAN)</option>
+                        <option value="BHX">Birmingham (BHX)</option>
+                        <option value="EDI">Edinburgh (EDI)</option>
+                        <option value="GLA">Glasgow (GLA)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="destination">To</label>
+                    <select id="destination" required>
+                        <option value="">Select destination</option>
+                        <optgroup label="Popular Europe">
+                            <option value="BCN">Barcelona (BCN)</option>
+                            <option value="MAD">Madrid (MAD)</option>
+                            <option value="PAR">Paris (PAR)</option>
+                            <option value="ROM">Rome (ROM)</option>
+                            <option value="AMS">Amsterdam (AMS)</option>
+                            <option value="BER">Berlin (BER)</option>
+                            <option value="LIS">Lisbon (LIS)</option>
+                            <option value="DUB">Dublin (DUB)</option>
+                        </optgroup>
+                        <optgroup label="USA">
+                            <option value="NYC">New York (NYC)</option>
+                            <option value="LAX">Los Angeles (LAX)</option>
+                            <option value="MIA">Miami (MIA)</option>
+                            <option value="SFO">San Francisco (SFO)</option>
+                        </optgroup>
+                        <optgroup label="Asia">
+                            <option value="DXB">Dubai (DXB)</option>
+                            <option value="BKK">Bangkok (BKK)</option>
+                            <option value="SIN">Singapore (SIN)</option>
+                            <option value="TYO">Tokyo (TYO)</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="outboundDate">Departure Date</label>
+                    <input type="date" id="outboundDate" required>
+                </div>
+                
+                <div class="form-group" id="returnDateGroup">
+                    <label for="returnDate">Return Date</label>
+                    <input type="date" id="returnDate" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="budget">Total Budget (£)</label>
+                    <input type="number" id="budget" value="1000" min="100" step="50" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tripType">Trip Type</label>
+                    <select id="tripType">
+                        <option value="leisure">Leisure</option>
+                        <option value="business">Business</option>
+                        <option value="adventure">Adventure</option>
+                        <option value="romantic">Romantic</option>
+                        <option value="family">Family</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="keywordInput">Interests & Keywords</label>
+                <div id="keywordTags" class="keyword-input"></div>
+                <input type="text" id="keywordInput" placeholder="Type and press Enter (e.g., food, beach, culture)">
+            </div>
+            
+            <button type="submit" class="primary" id="submitBtn">
+                🚀 Find Flights, Hotels & Create Itinerary
+            </button>
+        </form>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Searching flights, hotels, and creating your personalized itinerary...</p>
+            <p style="color: #666; font-size: 14px; margin-top: 10px;">This may take 15-30 seconds</p>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="result-card">
+                <h3>✈️ Best Flight Options</h3>
+                <div id="flights"></div>
+            </div>
+            
+            <div class="result-card">
+                <h3>🏨 Hotel Recommendations</h3>
+                <div class="hotel-grid" id="hotels"></div>
+            </div>
+            
+            <div class="result-card">
+                <h3>💰 Budget Breakdown</h3>
+                <div id="budget-info"></div>
+            </div>
+            
+            <div class="result-card">
+                <h3>🗺️ Your Personalized Itinerary</h3>
+                <div class="itinerary" id="itinerary"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // PWA Install Prompt
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').classList.add('show');
+        });
+        
+        document.getElementById('installButton').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response: ${outcome}`);
+                deferredPrompt = null;
+                document.getElementById('installPrompt').classList.remove('show');
+            }
+        });
+        
+        document.getElementById('dismissButton').addEventListener('click', () => {
+            document.getElementById('installPrompt').classList.remove('show');
+        });
+        
+        const API_URL = window.location.origin;
+        
+        // Trip type toggle
+        let tripType = 'return';
+        document.querySelectorAll('.trip-type-toggle button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.trip-type-toggle button').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                tripType = e.target.dataset.type;
+                document.getElementById('returnDateGroup').style.display = tripType === 'return' ? 'block' : 'none';
+                document.getElementById('returnDate').required = tripType === 'return';
+            });
+        });
+        
+        // Keywords
+        const keywords = [];
+        const keywordInput = document.getElementById('keywordInput');
+        const keywordTags = document.getElementById('keywordTags');
+        
+        keywordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const keyword = keywordInput.value.trim();
+                if (keyword && !keywords.includes(keyword)) {
+                    keywords.push(keyword);
+                    updateKeywordTags();
+                    keywordInput.value = '';
+                }
+            }
+        });
+        
+        function updateKeywordTags() {
+            keywordTags.innerHTML = keywords.map((kw, i) => `
+                <div class="keyword-tag">
+                    ${kw}
+                    <button onclick="removeKeyword(${i})">×</button>
+                </div>
+            `).join('');
+        }
+        
+        function removeKeyword(index) {
+            keywords.splice(index, 1);
+            updateKeywordTags();
+        }
+        
+        // Set default dates
+        const today = new Date();
+        const outbound = new Date(today);
+        outbound.setDate(today.getDate() + 30);
+        const returnDate = new Date(outbound);
+        returnDate.setDate(outbound.getDate() + 7);
+        
+        document.getElementById('outboundDate').value = outbound.toISOString().split('T')[0];
+        document.getElementById('returnDate').value = returnDate.toISOString().split('T')[0];
+        
+        // Default keywords
+        ['food', 'culture', 'sightseeing'].forEach(kw => keywords.push(kw));
+        updateKeywordTags();
+        
+        // Form submission
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('submitBtn').disabled = true;
+            
+            const formData = {
+                origin: document.getElementById('origin').value,
+                destination: document.getElementById('destination').value,
+                outbound_date: document.getElementById('outboundDate').value,
+                return_date: tripType === 'return' ? document.getElementById('returnDate').value : null,
+                budget: parseInt(document.getElementById('budget').value),
+                keywords: keywords.length > 0 ? keywords : ['general travel']
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/itinerary`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                showError(`Error: ${error.message}`);
+                console.error('Full error:', error);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('submitBtn').disabled = false;
+            }
+        });
+        
+        function displayResults(data) {
+            // Flights
+            const flightsDiv = document.getElementById('flights');
+            if (data.flight_options && data.flight_options.length > 0) {
+                flightsDiv.innerHTML = data.flight_options.map(flight => `
+                    <div class="flight-option">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 5px;">
+                                    ${flight.outbound_date}${flight.return_date ? ' → ' + flight.return_date : ''}
+                                </div>
+                                <div style="color: #666; font-size: 14px;">
+                                    ${flight.airline || 'Various airlines'}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="price">£${flight.price || 'N/A'}</div>
+                                <a href="${flight.booking_link || '#'}" target="_blank" class="book-button">Book Flight →</a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                flightsDiv.innerHTML = '<p style="color: #666;">No flights found. Try different dates.</p>';
+            }
+            
+            // Hotels
+            const hotelsDiv = document.getElementById('hotels');
+            if (data.hotel_options && data.hotel_options.length > 0) {
+                hotelsDiv.innerHTML = data.hotel_options.map(hotel => `
+                    <div class="hotel-option">
+                        <div style="font-weight: 600; margin-bottom: 8px;">${hotel.name}</div>
+                        <div class="hotel-rating" style="margin-bottom: 8px;">⭐ ${hotel.rating} (${hotel.reviews} reviews)</div>
+                        <div style="color: #666; font-size: 14px; margin-bottom: 10px;">${hotel.description || 'Great hotel option'}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 600; color: #f59e0b;">£${hotel.price_per_night}/night</div>
+                            <a href="${hotel.link}" target="_blank" class="book-button">View Hotel →</a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                hotelsDiv.innerHTML = '<p style="color: #666;">Hotel search unavailable. Check booking.com directly.</p>';
+            }
+            
+            // Budget
+            const budgetDiv = document.getElementById('budget-info');
+            budgetDiv.innerHTML = `
+                <div style="display: grid; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Total Budget:</span>
+                        <strong>£${data.total_budget}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Trip Duration:</span>
+                        <strong>${data.trip_duration} days</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Recommended Flight:</span>
+                        <strong>£${data.recommended_flight_cost || 0}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #667eea;">
+                        <span>Budget for Hotels & Activities:</span>
+                        <strong style="color: #667eea; font-size: 20px;">£${data.remaining_budget}</strong>
+                    </div>
+                </div>
+            `;
+            
+            // Itinerary
+            document.getElementById('itinerary').textContent = data.itinerary || 'Itinerary generation in progress...';
+            
+            document.getElementById('results').classList.add('show');
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>
